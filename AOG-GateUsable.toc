@@ -1,0 +1,9 @@
+## Interface: 120001
+## Title: AOG-GateUsable
+## Notes: Shows GATE USABLE when Gateway Control Shard is usable
+## Author: Fab
+## Version: 1.0.0
+## SavedVariables: AOGGateUsableDB
+
+AOG-GateUsable.lua
+AOG-GateUsable_Options.lua
