@@ -128,23 +128,31 @@ end
 local function Nudge(dx, dy)
   local db = GetDB(); if not db then return end
   if db.lockPos then return end
-  db.pos[1] = (db.pos[1] or 0) + dx
-  db.pos[2] = (db.pos[2] or 0) + dy
+
+  local x = (db.pos[1] or 0) + dx
+  local y = (db.pos[2] or 0) + dy
+
+  db.pos[1] = Clamp(x, -800, 800)
+  db.pos[2] = Clamp(y, -800, 800)
+
   Apply()
   RefreshControls()
 end
+
 
 local function EnsureUI()
   if ui then return end
 
   ui = CreateFrame("Frame", "AOGGateUsableConfigUI", UIParent, "BackdropTemplate")
-  ui:SetSize(420, 260)
+  ui:SetSize(420, 300)
   ui:SetPoint("CENTER", UIParent, "CENTER", 0, 120)
   ui:SetFrameStrata("DIALOG")
   ui:SetMovable(true)
   ui:EnableMouse(true)
   ui:RegisterForDrag("LeftButton")
   ui:SetClampedToScreen(true)
+  tinsert(UISpecialFrames, "AOGGateUsableConfigUI")
+
 
   ui:SetBackdrop({
     bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
@@ -153,6 +161,14 @@ local function EnsureUI()
     insets = { left = 11, right = 12, top = 12, bottom = 11 }
   })
   ui:Hide()
+
+  ui:SetScript("OnHide", function()
+  if _G.AOGGateUsable and _G.AOGGateUsable.SetConfigOpen then
+    _G.AOGGateUsable.SetConfigOpen(false)
+  end
+  Apply()
+end)
+
 
   -- FIX: sonst bleibt es "kleben"
   ui:SetScript("OnDragStart", function(self) self:StartMoving() end)
@@ -194,7 +210,7 @@ local function EnsureUI()
     Apply()
   end)
 
-  slY = MakeSlider(ui, "Y Offset", 220, -145, -800, 800, 1)
+  slY = MakeSlider(ui, "Y Offset", 220, -180, -800, 800, 1)
   slY:SetScript("OnValueChanged", function(_, v)
     slY:_setValText(v)
     if ui._refreshing then return end
@@ -203,6 +219,13 @@ local function EnsureUI()
     db.pos[2] = math.floor(v + 0.5)
     Apply()
   end)
+
+    local function Clamp(v, lo, hi)
+    if v < lo then return lo end
+    if v > hi then return hi end
+    return v
+    end
+
 
   -- Nudge row X
   local function MakeNudgeRow(anchorSlider, axis)
@@ -263,14 +286,21 @@ local function EnsureUI()
   btnClose:SetPoint("BOTTOMRIGHT", ui, "BOTTOMRIGHT", -16, 16)
   btnClose:SetScript("OnClick", function() ui:Hide() end)
 
-  ui:SetScript("OnShow", function()
-    local db = GetDB(); if not db then return end
-    db.pos = db.pos or {0, 120}
-    db.color = db.color or {1, 1, 1}
-    if db.lockPos == nil then db.lockPos = true end
-    RefreshControls()
-    Apply()
-  end)
+ui:SetScript("OnShow", function()
+  local db = GetDB(); if not db then return end
+  db.pos = db.pos or {0, 120}
+  db.color = db.color or {1, 1, 1}
+  if db.lockPos == nil then db.lockPos = true end
+  if db.fontSize == nil then db.fontSize = 40 end
+
+  -- PREVIEW AN
+  if _G.AOGGateUsable and _G.AOGGateUsable.SetConfigOpen then
+    _G.AOGGateUsable.SetConfigOpen(true)
+  end
+
+  RefreshControls()
+  Apply()
+end)
 end
 
 SLASH_AOGGATECFG1 = "/gate"

@@ -6,7 +6,6 @@ local f = CreateFrame("Frame")
 
 -- ===== CONFIG =====
 local ITEM_ID = 188152 -- Gateway Control Shard
-local CHECK_INTERVAL = 0.10
 local TEXT = "GATE USABLE"
 
 local DEFAULTS = {
@@ -20,8 +19,11 @@ local DEFAULTS = {
 
 AOGGateUsableDB = AOGGateUsableDB or {}
 
+local configOpen = false -- Preview: wenn true => Text immer anzeigen (für Config)
+
 local textFS
-local ticker
+local lastShown = nil
+
 
 local function CopyDefaults(dst, src)
   for k, v in pairs(src) do
@@ -55,12 +57,24 @@ end
 
 local function ShouldShow()
   local db = AOGGateUsableDB
-  if not db.enabled then return false end
+
+  if not db.enabled then
+    return false
+  end
+
+  -- PREVIEW: wenn Config offen ist, Text immer zeigen (ohne Gate nötig)
+  if configOpen then
+    return true
+  end
+
+  -- Normalbetrieb:
   if not HasShard() then return false end
   if not IsShardUsable() then return false end
   if not IsShardOffCooldown() then return false end
+
   return true
 end
+
 
 local function ApplyTextStyle()
   if not textFS then return end
@@ -78,20 +92,24 @@ end
 
 local function Update()
   if not textFS then return end
-  if ShouldShow() then textFS:Show() else textFS:Hide() end
+
+  local show = ShouldShow()
+  if show == lastShown then return end
+  lastShown = show
+
+  if show then
+    textFS:Show()
+  else
+    textFS:Hide()
+  end
 end
+
 
 local function CreateUI()
   textFS = UIParent:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
   textFS:SetText(TEXT)
   textFS:Hide()
   ApplyTextStyle()
-end
-
-local function StartTicker()
-  if ticker then return end
-  if not C_Timer or not C_Timer.NewTicker then return end
-  ticker = C_Timer.NewTicker(CHECK_INTERVAL, Update)
 end
 
 -- API für Options.lua
@@ -101,6 +119,11 @@ _G.AOGGateUsable.Apply = function()
   ApplyTextStyle()
   Update()
 end
+_G.AOGGateUsable.SetConfigOpen = function(open)
+  configOpen = open and true or false
+  Update()
+end
+
 
 f:RegisterEvent("ADDON_LOADED")
 f:RegisterEvent("PLAYER_LOGIN")
@@ -116,7 +139,6 @@ f:SetScript("OnEvent", function(_, event, arg1)
     AOGGateUsableDB = AOGGateUsableDB or {}
     CopyDefaults(AOGGateUsableDB, DEFAULTS)
     if not textFS then CreateUI() end
-    StartTicker()
     Update()
     return
   end
